@@ -4,6 +4,9 @@ import {
   verifyRefreshToken,
 } from "../../utils/jwt.js";
 
+import prisma from '../prismaClient';
+import bcrypt from 'bcrypt';
+
 export class AuthService {
 
   static async login(userId: string) {

@@ -45,3 +45,9 @@ export async function refresh(req: Request, res: Response) {
     return res.status(401).json({ message: "Invalid refresh token" });
   }
 }
+
+export async function register(req: Request, res: Response) {
+  const { email, password } = req.body;
+
+  
+}
