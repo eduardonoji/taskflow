@@ -4,17 +4,36 @@ import {
   verifyRefreshToken,
 } from "../../utils/jwt.js";
 
-import prisma from '../prismaClient';
-import bcrypt from 'bcrypt';
-
+import prisma from "../../lib/prisma.js";
+import bcrypt from "bcrypt";
+import { AppError } from "../../shared/errors/AppError.js";
 export class AuthService {
 
-  static async login(userId: string) {
+  static async login(email: string, password: string) {
 
-    const accessToken = generateAccessToken(userId);
-    const refreshToken = generateRefreshToken(userId);
+    const user = await prisma.user.findUnique({
+      where: {
+        email: email
+      }
+    });
 
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    
+    if (!passwordMatch) {
+        throw new AppError("Invalid credentials", 401);
+    }
+    
+    const accessToken = generateAccessToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
+    
+    const { password: userPassword, ...userData } = user;
+    
     return {
+      ...userData,
       accessToken,
       refreshToken,
     };
@@ -31,4 +50,15 @@ export class AuthService {
     };
   }
 
+  static async register(name: string, email: string, password: string) {
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: await bcrypt.hash(password, 10),
+      },
+    });
+
+    return user;
+  }
 }

@@ -1,33 +1,19 @@
 import type { Request, Response } from "express";
-import bcrypt from "bcrypt";
 import { AuthService } from "./auth.service.js";
 
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
 
-  // mock de usuário
-  const user = {
-    id: "1",
-    email: "test@email.com",
-    password: await bcrypt.hash("123456", 10),
-  };
+  const result = await AuthService.login(email, password);
 
-  const passwordMatch = await bcrypt.compare(password, user.password);
-
-  if (!passwordMatch) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  const { accessToken, refreshToken } = await AuthService.login(user.id);
-
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie("refreshToken", result.refreshToken, {
     httpOnly: true,
     secure: true,
     sameSite: "strict",
     path: "/",
   });
 
-  return res.json({ accessToken });
+  return res.json({ result });
 }
 
 export async function refresh(req: Request, res: Response) {
@@ -49,5 +35,8 @@ export async function refresh(req: Request, res: Response) {
 export async function register(req: Request, res: Response) {
   const { email, password } = req.body;
 
-  
+  const user = await AuthService.register("Test User", email, password);
+
+  return res.status(201).json(user);
+
 }
