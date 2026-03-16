@@ -9,6 +9,10 @@ export function useAuth() {
   async function handleLogin(email: string, password: string) {
     const data = await login(email, password);
 
+    if (!data?.access_token) {
+      throw new Error("Token não recebido");
+    }
+
     localStorage.setItem("accessToken", data.access_token);
 
     router.push("/inicio");
