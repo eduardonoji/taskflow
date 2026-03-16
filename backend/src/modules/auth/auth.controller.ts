@@ -8,12 +8,14 @@ export async function login(req: Request, res: Response) {
 
   res.cookie("refreshToken", result.refresh_token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
+    secure: false, // set to true in production with HTTPS
+    sameSite: "lax", // adjust as needed (e.g., "strict" or "none")
     path: "/",
   });
 
-  return res.json({ result });
+  const { refresh_token, ...safeResult } = result;
+
+  return res.json(safeResult);
 }
 
 export async function refresh(req: Request, res: Response) {
@@ -24,9 +26,9 @@ export async function refresh(req: Request, res: Response) {
   }
 
   try {
-    const { accessToken } = await AuthService.refresh(refreshToken);
+    const { access_token } = await AuthService.refresh(refreshToken);
 
-    return res.json({ accessToken });
+    return res.json({ access_token });
   } catch {
     return res.status(401).json({ message: "Invalid refresh token" });
   }

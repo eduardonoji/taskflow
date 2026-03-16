@@ -43,10 +43,10 @@ export class AuthService {
 
     const payload = verifyRefreshToken(refreshToken) as { userId: string };
 
-    const accessToken = generateAccessToken(payload.userId);
+    const access_token = generateAccessToken(payload.userId);
 
     return {
-      accessToken,
+      access_token,
     };
   }
 
