@@ -1,63 +1,29 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  const router = useRouter();
-
-  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setErrorMsg("");
-
-    try {
-      const res = await fetch("https://localhost:3000/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        localStorage.setItem("accessToken", data.access_token);
-        router.push("/inicio");
-      } else {
-        setErrorMsg(data.message || "Erro ao fazer login");
-      }
-    } catch {
-      setErrorMsg("Erro de conexão com o servidor");
-    }
-  };
-
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto" }}>
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.currentTarget.value)}
-          required
-          style={{ width: "100%", marginBottom: "10px", padding: "8px" }}
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          onChange={(e) => setPassword(e.currentTarget.value)}
-          required
-          style={{ width: "100%", marginBottom: "10px", padding: "8px" }}
-        />
-        {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
-        <button type="submit" style={{ width: "100%", padding: "10px" }}>
-          Entrar
-        </button>
-      </form>
+    <div className="min-h-screen grid grid-cols-2">
+
+      {/* lado esquerdo */}
+      <div className="flex items-center justify-center bg-blue-600 text-white p-10">
+        <div className="max-w-md">
+          <h1 className="text-4xl font-bold mb-4">
+            TaskFlow (0.1.0)
+          </h1>
+
+          <p className="text-lg opacity-90">
+            Organize suas tarefas e aumente sua produtividade.
+          </p>
+        </div>
+      </div>
+
+      {/* lado direito */}
+      <div className="flex items-center justify-center">
+        <div className="w-full max-w-md">
+          <LoginForm />
+        </div>
+      </div>
+
     </div>
   );
 }

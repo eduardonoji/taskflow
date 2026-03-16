@@ -6,7 +6,7 @@ export async function login(req: Request, res: Response) {
 
   const result = await AuthService.login(email, password);
 
-  res.cookie("refreshToken", result.refreshToken, {
+  res.cookie("refreshToken", result.refresh_token, {
     httpOnly: true,
     secure: true,
     sameSite: "strict",

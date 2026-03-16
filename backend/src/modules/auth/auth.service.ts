@@ -27,15 +27,15 @@ export class AuthService {
         throw new AppError("Invalid credentials", 401);
     }
     
-    const accessToken = generateAccessToken(user.id);
-    const refreshToken = generateRefreshToken(user.id);
+    const access_token = generateAccessToken(user.id);
+    const refresh_token = generateRefreshToken(user.id);
     
     const { password: userPassword, ...userData } = user;
     
     return {
       ...userData,
-      accessToken,
-      refreshToken,
+      access_token,
+      refresh_token,
     };
   }
 
