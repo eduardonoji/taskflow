@@ -6,14 +6,21 @@ export async function login(req: Request, res: Response) {
 
   const result = await AuthService.login(email, password);
 
-  res.cookie("refreshToken", result.refresh_token, {
+  res.cookie("accessToken", result.access_token, {
     httpOnly: true,
-    secure: false, // set to true in production with HTTPS
-    sameSite: "lax", // adjust as needed (e.g., "strict" or "none")
-    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 15 * 60 * 1000, // 15 min
   });
 
-  const { refresh_token, ...safeResult } = result;
+  res.cookie("refreshToken", result.refresh_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+  });
+
+  const { access_token, refresh_token, ...safeResult } = result;
 
   return res.json(safeResult);
 }
@@ -26,9 +33,23 @@ export async function refresh(req: Request, res: Response) {
   }
 
   try {
-    const { access_token } = await AuthService.refresh(refreshToken);
+    const { access_token, refresh_token } = await AuthService.refresh(refreshToken);
 
-    return res.json({ access_token });
+    res.cookie("accessToken", access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refreshToken", refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({ message: "Token refreshed" });
   } catch {
     return res.status(401).json({ message: "Invalid refresh token" });
   }

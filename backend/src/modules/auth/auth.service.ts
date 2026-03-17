@@ -18,7 +18,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError("Invalid credentials", 404);
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
@@ -30,6 +30,14 @@ export class AuthService {
     const access_token = generateAccessToken(user.id);
     const refresh_token = generateRefreshToken(user.id);
     
+    await prisma.refreshToken.create({
+      data: {
+        token: refresh_token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      }
+    });
+
     const { password: userPassword, ...userData } = user;
     
     return {
@@ -40,13 +48,45 @@ export class AuthService {
   }
 
   static async refresh(refreshToken: string) {
+    // 1. verifica no banco
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: refreshToken }
+    });
 
-    const payload = verifyRefreshToken(refreshToken) as { userId: string };
+    if (!storedToken) {
+      throw new AppError("Invalid refresh token", 403);
+    }
 
-    const access_token = generateAccessToken(payload.userId);
+    // 2. valida JWT
+    let payload: { userId: string };
+
+    try {
+      payload = verifyRefreshToken(refreshToken) as { userId: string };
+    } catch {
+      throw new AppError("Expired or invalid token", 403);
+    }
+
+    // 3. rotação (remove o antigo)
+    await prisma.refreshToken.delete({
+      where: { token: refreshToken }
+    });
+
+    // 4. gera novos tokens
+    const newAccessToken = generateAccessToken(payload.userId);
+    const newRefreshToken = generateRefreshToken(payload.userId);
+
+    // 5. salva novo refresh token
+    await prisma.refreshToken.create({
+      data: {
+        token: newRefreshToken,
+        userId: payload.userId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      }
+    });
 
     return {
-      access_token,
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
     };
   }
 
