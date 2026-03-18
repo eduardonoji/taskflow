@@ -10,7 +10,7 @@ export async function login(req: Request, res: Response) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 15 * 60 * 1000, // 15 min
+    maxAge: 1 * 60 * 1000, // 5 min
   });
 
   res.cookie("refreshToken", result.refresh_token, {
@@ -39,7 +39,7 @@ export async function refresh(req: Request, res: Response) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 15 * 60 * 1000,
+      maxAge: 1 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refresh_token, {
