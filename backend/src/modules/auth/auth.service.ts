@@ -18,7 +18,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new AppError("Invalid credentials", 404);
+      throw new AppError("Invalid credentials", 401);
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
@@ -53,9 +53,20 @@ export class AuthService {
       where: { token: refreshToken }
     });
 
-    if (!storedToken) {
-      throw new AppError("Invalid refresh token", 403);
+  if (!storedToken) {
+    // token não está no banco — pode ser reuso de token rotacionado
+    try {
+      const payload = verifyRefreshToken(refreshToken) as { userId: string };
+      // JWT ainda válido mas não está no banco = foi rotacionado = reuso detectado
+      await prisma.refreshToken.deleteMany({
+        where: { userId: payload.userId }
+      });
+      console.warn("🚨 Reuso de refresh token detectado!!! userId:", payload.userId);
+    } catch {
+      // JWT inválido ou expirado = token forjado, ignora
     }
+    throw new AppError("Invalid refresh token", 403);
+  }
 
     // 2. valida JWT
     let payload: { userId: string };
