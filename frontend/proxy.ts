@@ -9,71 +9,65 @@ const authRoutes = ["/login", "/register", "/forgot-password"];
 const publicRoutes = ["/about", "/pricing", "/blog", "/termos"];
 
 export async function proxy(request: NextRequest) {
-  const token = request.cookies.get("accessToken")?.value;
-  const refreshToken = request.cookies.get("refreshToken")?.value;
+
   const { pathname } = request.nextUrl;
-  console.log("Fui acionado para a rota:", pathname);
+  const loginUrl = new URL("/login", request.url);
+
   // Rota totalmente pública — passa sempre
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
+  const token = request.cookies.get("accessToken")?.value;
+  const refreshToken = request.cookies.get("refreshToken")?.value;
+  const secret = new TextEncoder().encode(process.env.ACCESS_TOKEN_SECRET!);
+
   // Auth route — se já está logado, redireciona para home
   if (authRoutes.some(route => pathname.startsWith(route))) {
     if (token) {
       try {
-        const secret = new TextEncoder().encode(process.env.ACCESS_TOKEN_SECRET!);
         await jwtVerify(token, secret);
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      } catch {
-        // token inválido, deixa acessar o login normalmente
-      }
+        return NextResponse.redirect(new URL("/inicio", request.url));
+      } catch {}
     }
     return NextResponse.next();
   }
 
-  if (!token && !refreshToken) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
   try {
-    const secret = new TextEncoder().encode(process.env.ACCESS_TOKEN_SECRET!);
     await jwtVerify(token!, secret);
     return NextResponse.next();
   } catch {
 
-    console.log("⚠️ accessToken expirado ou inválido");
-
     if (!refreshToken) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(loginUrl);
+    }
+    const refreshSecret = new TextEncoder().encode(process.env.REFRESH_TOKEN_SECRET!);
+    try {
+      await jwtVerify(refreshToken, refreshSecret);
+    } catch {
+      return NextResponse.redirect(loginUrl);
     }
     try {
-      console.log("🔄 Tentando renovar o accessToken...");
-      // Chama sua rota de refresh no backend
       const response = await fetch(`${process.env.BACKEND_URL}/auth/refresh`, {
         method: "POST",
         headers: { Cookie: `refreshToken=${refreshToken}` },
+        signal: AbortSignal.timeout(3000),
       });
 
       if (!response.ok) {
-        console.log("🔴 Refresh falhou:", response);
-        console.log("🔴 Refresh falhou, redirecionando para /login");
-        return NextResponse.redirect(new URL("/login", request.url));
+        return NextResponse.redirect(loginUrl);
       }
-
-      const redirectResponse = NextResponse.redirect(request.url);
-      response.headers.getSetCookie().forEach(cookie => {
-        redirectResponse.headers.append("Set-Cookie", cookie);
-      });
-
-      return redirectResponse;
+      const nextRes = NextResponse.next();
+      response.headers.getSetCookie().forEach((c: string) => nextRes.headers.append("Set-Cookie", c));
+      return nextRes;
     } catch {
-      console.log("🔴 Erro ao chamar rota de refresh, redirecionando para /login");
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(loginUrl);
     }
   }
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/|auth/|.*\\..*).*)",
+  ],
 };
